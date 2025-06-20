@@ -276,7 +276,7 @@ describe('SearchAndFilters Component', () => {
     const { container } = render(<SearchAndFilters />)
 
     const mainContainer = container.firstChild
-    expect(mainContainer).toHaveClass('bg-white', 'rounded-xl', 'shadow-sm', 'border', 'border-gray-200', 'p-6')
+    expect(mainContainer).toHaveClass('bg-white', 'rounded-xl', 'shadow-sm', 'border', 'border-gray-200', 'p-4', 'sm:p-6')
   })
 
   it('applies transition animations to filter buttons', () => {

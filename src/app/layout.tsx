@@ -27,17 +27,18 @@ export default function RootLayout({
         <AppProvider>
           <div className="min-h-screen bg-gray-50">
             <header className="bg-white shadow-sm border-b border-gray-200 sticky top-0 z-50">
-              <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                <div className="flex items-center justify-between h-16">
-                  <div className="flex items-center space-x-3">
-                    <div className="text-2xl font-bold text-blue-600">👏</div>
-                    <h1 className="text-xl font-semibold text-gray-900">
+              <div className="max-w-7xl mx-auto px-3 sm:px-4 lg:px-8">
+                <div className="flex items-center justify-between h-14 sm:h-16">
+                  <div className="flex items-center space-x-2 sm:space-x-3">
+                    <div className="text-xl sm:text-2xl font-bold text-blue-600">👏</div>
+                    <h1 className="text-base sm:text-xl font-semibold text-gray-900">
                       Feed de Reconhecimentos
                     </h1>
                   </div>
-                  <div className="flex items-center space-x-2 text-sm text-gray-500">
-                    <span>Inspire e seja inspirado</span>
-                    <span className="text-lg">✨</span>
+                  <div className="flex items-center space-x-1 sm:space-x-2 text-xs sm:text-sm text-gray-500">
+                    <span className="hidden sm:inline">Inspire e seja inspirado</span>
+                    <span className="sm:hidden">Inspire</span>
+                    <span className="text-base sm:text-lg">✨</span>
                   </div>
                 </div>
               </div>

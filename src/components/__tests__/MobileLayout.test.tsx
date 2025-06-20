@@ -108,7 +108,7 @@ describe('MobileLayout Component', () => {
     render(<MobileLayout />)
     
     const header = screen.getByText('Feed').closest('div')?.parentElement
-    expect(header).toHaveClass('sticky', 'top-16', 'z-40', 'bg-white', 'border-b')
+    expect(header).toHaveClass('sticky', 'top-14', 'sm:top-16', 'z-40', 'bg-white', 'border-b')
   })
 
   it('tabs have proper flex layout', () => {
@@ -134,9 +134,9 @@ describe('MobileLayout Component', () => {
   it('content area has proper padding and background', () => {
     render(<MobileLayout />)
     
-    // Find the main content container that should have padding
-    const contentArea = screen.getByTestId('feed-component').closest('div.p-4')
-    expect(contentArea).toHaveClass('p-4', 'bg-gray-50')
+    // Find the main content container that should have padding (parent of the space-y container)
+    const contentArea = screen.getByTestId('search-filters-component').parentElement?.parentElement
+    expect(contentArea).toHaveClass('p-3', 'sm:p-4', 'bg-gray-50')
   })
 
   it('feed content has proper spacing', () => {
@@ -144,7 +144,7 @@ describe('MobileLayout Component', () => {
     
     // Find the container that wraps both search-filters and feed
     const feedContainer = screen.getByTestId('search-filters-component').parentElement
-    expect(feedContainer).toHaveClass('space-y-6')
+    expect(feedContainer).toHaveClass('space-y-4', 'sm:space-y-6')
   })
 
   it('tabs maintain state through multiple clicks', async () => {
