@@ -46,7 +46,7 @@ Uma plataforma moderna de reconhecimentos entre participantes da equipe, desenvo
 ### Instalação
 ```bash
 # Clone o repositório
-git clone <seu-repositorio>
+git clone https://github.com/GersonRocha9/applause-teste.git
 cd applause-teste
 
 # Instale as dependências
