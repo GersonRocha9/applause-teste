@@ -1,0 +1,288 @@
+name: 🚀 Release - Automated Releases
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+    inputs:
+      release_type:
+        description: 'Release type'
+        required: true
+        default: 'auto'
+        type: choice
+        options:
+          - auto
+          - patch
+          - minor
+          - major
+
+permissions:
+  contents: write
+  issues: write
+  pull-requests: write
+  packages: write
+
+jobs:
+  # ===============================================
+  # 🏷️ SEMANTIC RELEASE
+  # ===============================================
+  release:
+    name: 🏷️ Create Release
+    runs-on: ubuntu-latest
+    if: "!contains(github.event.head_commit.message, '[skip ci]')"
+    
+    outputs:
+      released: ${{ steps.release.outputs.released }}
+      version: ${{ steps.release.outputs.version }}
+      tag: ${{ steps.release.outputs.tag }}
+    
+    steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: 📦 Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20.x'
+          cache: 'npm'
+
+      - name: 🔧 Install dependencies
+        run: npm ci
+
+      - name: 🧪 Run tests
+        run: npm run test:coverage
+
+      - name: 🏗️ Build application
+        run: npm run build
+
+      - name: 📋 Generate changelog
+        id: changelog
+        run: |
+          # Install conventional-changelog-cli if not present
+          npm install -g conventional-changelog-cli
+          
+          # Generate changelog since last tag
+          LAST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "")
+          if [ -z "$LAST_TAG" ]; then
+            echo "No previous tags found, generating full changelog"
+            conventional-changelog -p angular -i CHANGELOG.md -s -r 0
+          else
+            echo "Generating changelog since $LAST_TAG"
+            conventional-changelog -p angular -i CHANGELOG.md -s
+          fi
+          
+          # Read the new changelog content
+          NEW_CONTENT=$(head -100 CHANGELOG.md)
+          echo "changelog<<EOF" >> $GITHUB_OUTPUT
+          echo "$NEW_CONTENT" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
+      - name: 🏷️ Create semantic release
+        id: release
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const { execSync } = require('child_process');
+            
+            // Get current version
+            const package = require('./package.json');
+            const currentVersion = package.version;
+            
+            // Determine release type
+            let releaseType = '${{ github.event.inputs.release_type }}' || 'auto';
+            
+            if (releaseType === 'auto') {
+              // Analyze commits since last tag to determine release type
+              const lastTag = execSync('git describe --tags --abbrev=0 2>/dev/null || echo ""', { encoding: 'utf-8' }).trim();
+              const commitRange = lastTag ? `${lastTag}..HEAD` : '';
+              const commits = execSync(`git log ${commitRange} --pretty=format:"%s"`, { encoding: 'utf-8' });
+              
+              if (commits.includes('BREAKING CHANGE') || commits.includes('!:')) {
+                releaseType = 'major';
+              } else if (commits.includes('feat:') || commits.includes('feat(')) {
+                releaseType = 'minor';
+              } else if (commits.includes('fix:') || commits.includes('fix(')) {
+                releaseType = 'patch';
+              } else {
+                console.log('No significant changes found, skipping release');
+                core.setOutput('released', 'false');
+                return;
+              }
+            }
+            
+            // Calculate new version
+            const [major, minor, patch] = currentVersion.split('.').map(Number);
+            let newVersion;
+            
+            switch (releaseType) {
+              case 'major':
+                newVersion = `${major + 1}.0.0`;
+                break;
+              case 'minor':
+                newVersion = `${major}.${minor + 1}.0`;
+                break;
+              case 'patch':
+                newVersion = `${major}.${minor}.${patch + 1}`;
+                break;
+              default:
+                throw new Error(`Invalid release type: ${releaseType}`);
+            }
+            
+            const newTag = `v${newVersion}`;
+            
+            // Update package.json
+            execSync(`npm version ${newVersion} --no-git-tag-version`);
+            
+            // Commit version bump
+            execSync('git config user.name "github-actions[bot]"');
+            execSync('git config user.email "github-actions[bot]@users.noreply.github.com"');
+            execSync('git add package.json package-lock.json');
+            execSync(`git commit -m "chore: release ${newVersion} [skip ci]"`);
+            execSync(`git push origin main`);
+            
+            // Create tag
+            execSync(`git tag ${newTag}`);
+            execSync(`git push origin ${newTag}`);
+            
+            console.log(`✅ Created release ${newTag}`);
+            
+            core.setOutput('released', 'true');
+            core.setOutput('version', newVersion);
+            core.setOutput('tag', newTag);
+
+      - name: 📦 Create GitHub Release
+        if: steps.release.outputs.released == 'true'
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const tag = '${{ steps.release.outputs.tag }}';
+            const version = '${{ steps.release.outputs.version }}';
+            
+            // Get commits since last release
+            const { data: releases } = await github.rest.repos.listReleases({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              per_page: 1
+            });
+            
+            const lastRelease = releases[0];
+            const compareBase = lastRelease ? lastRelease.tag_name : '';
+            
+            let compareUrl = '';
+            if (compareBase) {
+              compareUrl = `https://github.com/${context.repo.owner}/${context.repo.repo}/compare/${compareBase}...${tag}`;
+            }
+            
+            // Generate release notes
+            const { data: commits } = await github.rest.repos.listCommits({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              sha: context.sha,
+              since: lastRelease ? lastRelease.created_at : undefined,
+              per_page: 100
+            });
+            
+            const features = [];
+            const fixes = [];
+            const breaking = [];
+            const others = [];
+            
+            commits.forEach(commit => {
+              const message = commit.commit.message;
+              const firstLine = message.split('\n')[0];
+              
+              if (message.includes('BREAKING CHANGE') || firstLine.includes('!:')) {
+                breaking.push(`- ${firstLine} ([${commit.sha.substr(0,7)}](${commit.html_url}))`);
+              } else if (firstLine.startsWith('feat:') || firstLine.startsWith('feat(')) {
+                features.push(`- ${firstLine.replace(/^feat(\([^)]*\))?:\s*/, '')} ([${commit.sha.substr(0,7)}](${commit.html_url}))`);
+              } else if (firstLine.startsWith('fix:') || firstLine.startsWith('fix(')) {
+                fixes.push(`- ${firstLine.replace(/^fix(\([^)]*\))?:\s*/, '')} ([${commit.sha.substr(0,7)}](${commit.html_url}))`);
+              } else if (!firstLine.startsWith('chore:') && !firstLine.includes('[skip ci]')) {
+                others.push(`- ${firstLine} ([${commit.sha.substr(0,7)}](${commit.html_url}))`);
+              }
+            });
+            
+            let releaseNotes = `# 🚀 Release ${version}\n\n`;
+            
+            if (breaking.length > 0) {
+              releaseNotes += `## 💥 Breaking Changes\n${breaking.join('\n')}\n\n`;
+            }
+            
+            if (features.length > 0) {
+              releaseNotes += `## ✨ New Features\n${features.join('\n')}\n\n`;
+            }
+            
+            if (fixes.length > 0) {
+              releaseNotes += `## 🐛 Bug Fixes\n${fixes.join('\n')}\n\n`;
+            }
+            
+            if (others.length > 0) {
+              releaseNotes += `## 📝 Other Changes\n${others.join('\n')}\n\n`;
+            }
+            
+            if (compareBase) {
+              releaseNotes += `## 🔗 Full Changelog\n[${compareBase}...${tag}](${compareUrl})\n\n`;
+            }
+            
+            releaseNotes += `---\n**Released at:** ${new Date().toISOString()}\n`;
+            releaseNotes += `**Commit:** [${context.sha.substr(0,7)}](https://github.com/${context.repo.owner}/${context.repo.repo}/commit/${context.sha})`;
+            
+            // Create the release
+            const release = await github.rest.repos.createRelease({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              tag_name: tag,
+              name: `🚀 ${version}`,
+              body: releaseNotes,
+              draft: false,
+              prerelease: version.includes('-')
+            });
+            
+            console.log(`✅ Created GitHub Release: ${release.data.html_url}`);
+
+      - name: 📢 Notify success
+        if: steps.release.outputs.released == 'true'
+        run: |
+          echo "🎉 Successfully created release ${{ steps.release.outputs.tag }}"
+          echo "📦 Version: ${{ steps.release.outputs.version }}"
+          echo "🔗 Check it out: https://github.com/${{ github.repository }}/releases/tag/${{ steps.release.outputs.tag }}"
+
+  # ===============================================
+  # 📊 POST-RELEASE METRICS
+  # ===============================================
+  metrics:
+    name: 📊 Release Metrics
+    runs-on: ubuntu-latest
+    needs: release
+    if: needs.release.outputs.released == 'true'
+    
+    steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@v4
+
+      - name: 📊 Calculate release metrics
+        run: |
+          echo "📊 Release Metrics for ${{ needs.release.outputs.version }}"
+          echo "================================"
+          
+          # Get repository stats
+          TOTAL_COMMITS=$(git rev-list --count HEAD)
+          TOTAL_CONTRIBUTORS=$(git log --format='%ae' | sort -u | wc -l)
+          
+          # Get recent activity (last 30 days)
+          RECENT_COMMITS=$(git log --since="30 days ago" --oneline | wc -l)
+          
+          echo "📈 Total Commits: $TOTAL_COMMITS"
+          echo "👥 Total Contributors: $TOTAL_CONTRIBUTORS"
+          echo "🔥 Recent Activity (30d): $RECENT_COMMITS commits"
+          echo "🏷️ Latest Release: ${{ needs.release.outputs.tag }}"
+          
+          # Save metrics for potential webhook/notification use
+          echo "TOTAL_COMMITS=$TOTAL_COMMITS" >> $GITHUB_ENV
+          echo "TOTAL_CONTRIBUTORS=$TOTAL_CONTRIBUTORS" >> $GITHUB_ENV
+          echo "RECENT_COMMITS=$RECENT_COMMITS" >> $GITHUB_ENV 

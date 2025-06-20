@@ -1,0 +1,361 @@
+name: 🔒 Dependencies & Security
+
+on:
+  schedule:
+    # Run daily at 6 AM UTC
+    - cron: '0 6 * * *'
+  workflow_dispatch:
+  push:
+    paths:
+      - 'package.json'
+      - 'package-lock.json'
+      - '.github/workflows/dependencies.yml'
+
+permissions:
+  contents: read
+  security-events: write
+  pull-requests: write
+
+jobs:
+  # ===============================================
+  # 🔍 SECURITY AUDIT
+  # ===============================================
+  security-audit:
+    name: 🔍 Security Audit
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@v4
+
+      - name: 📦 Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20.x'
+          cache: 'npm'
+
+      - name: 🔧 Install dependencies
+        run: npm ci
+
+      - name: 🔍 Run npm audit
+        run: |
+          echo "🔍 Running npm security audit..."
+          npm audit --audit-level=moderate || echo "Vulnerabilities found, continuing with detailed report..."
+          
+          # Generate detailed audit report
+          npm audit --json > audit-results.json || true
+          
+          # Count vulnerabilities by severity
+          CRITICAL=$(jq '.vulnerabilities | to_entries | map(select(.value.severity == "critical")) | length' audit-results.json 2>/dev/null || echo "0")
+          HIGH=$(jq '.vulnerabilities | to_entries | map(select(.value.severity == "high")) | length' audit-results.json 2>/dev/null || echo "0")
+          MODERATE=$(jq '.vulnerabilities | to_entries | map(select(.value.severity == "moderate")) | length' audit-results.json 2>/dev/null || echo "0")
+          LOW=$(jq '.vulnerabilities | to_entries | map(select(.value.severity == "low")) | length' audit-results.json 2>/dev/null || echo "0")
+          
+          echo "🚨 Security Audit Results:"
+          echo "Critical: $CRITICAL"
+          echo "High: $HIGH"
+          echo "Moderate: $MODERATE"
+          echo "Low: $LOW"
+          
+          # Fail if critical or high vulnerabilities found
+          if [ "$CRITICAL" -gt 0 ] || [ "$HIGH" -gt 0 ]; then
+            echo "❌ Critical or High vulnerabilities found!"
+            exit 1
+          fi
+
+      - name: 🛡️ Upload audit results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: security-audit-results
+          path: audit-results.json
+          retention-days: 30
+
+  # ===============================================
+  # 📊 DEPENDENCY ANALYSIS
+  # ===============================================
+  dependency-analysis:
+    name: 📊 Dependency Analysis
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@v4
+
+      - name: 📦 Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20.x'
+          cache: 'npm'
+
+      - name: 🔧 Install dependencies
+        run: npm ci
+
+      - name: 📊 Analyze dependencies
+        run: |
+          echo "📊 Dependency Analysis Report"
+          echo "============================"
+          
+          # Count total dependencies
+          TOTAL_DEPS=$(npm ls --depth=0 --json 2>/dev/null | jq '.dependencies | length' || echo "0")
+          DEV_DEPS=$(jq '.devDependencies | length' package.json)
+          PROD_DEPS=$(jq '.dependencies | length' package.json)
+          
+          echo "📦 Total installed packages: $TOTAL_DEPS"
+          echo "🏗️ Production dependencies: $PROD_DEPS"
+          echo "🛠️ Development dependencies: $DEV_DEPS"
+          
+          # Check for outdated packages
+          echo ""
+          echo "📅 Outdated packages:"
+          npm outdated || echo "All packages are up to date!"
+          
+          # Check bundle size impact (if applicable)
+          echo ""
+          echo "📈 Bundle analysis:"
+          if [ -f "next.config.ts" ]; then
+            echo "Next.js project detected - run 'npm run analyze' for detailed bundle analysis"
+          fi
+
+      - name: 🔍 Check for unused dependencies
+        run: |
+          # Install depcheck to find unused dependencies
+          npm install -g depcheck
+          
+          echo "🔍 Checking for unused dependencies..."
+          depcheck --json > depcheck-results.json || true
+          
+          UNUSED=$(jq '.dependencies | length' depcheck-results.json 2>/dev/null || echo "0")
+          
+          if [ "$UNUSED" -gt 0 ]; then
+            echo "⚠️ Found $UNUSED potentially unused dependencies:"
+            jq '.dependencies[]' depcheck-results.json
+          else
+            echo "✅ No unused dependencies found!"
+          fi
+
+      - name: 📤 Upload dependency analysis
+        uses: actions/upload-artifact@v4
+        with:
+          name: dependency-analysis
+          path: depcheck-results.json
+          retention-days: 7
+
+  # ===============================================
+  # 🆙 DEPENDENCY UPDATES CHECK
+  # ===============================================
+  update-check:
+    name: 🆙 Update Check
+    runs-on: ubuntu-latest
+    outputs:
+      has_updates: ${{ steps.check.outputs.has_updates }}
+      update_summary: ${{ steps.check.outputs.update_summary }}
+    
+    steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@v4
+
+      - name: 📦 Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20.x'
+          cache: 'npm'
+
+      - name: 🔍 Check for updates
+        id: check
+        run: |
+          echo "🔍 Checking for available updates..."
+          
+          # Check for outdated packages
+          npm outdated --json > outdated.json || true
+          
+          # Count updates
+          UPDATES=$(jq 'keys | length' outdated.json 2>/dev/null || echo "0")
+          
+          echo "has_updates=$UPDATES" >> $GITHUB_OUTPUT
+          
+          if [ "$UPDATES" -gt 0 ]; then
+            echo "📦 Found $UPDATES packages that can be updated:"
+            
+            # Generate update summary
+            SUMMARY=$(jq -r 'to_entries[] | "- \(.key): \(.value.current) → \(.value.latest)"' outdated.json 2>/dev/null || echo "No updates")
+            
+            echo "update_summary<<EOF" >> $GITHUB_OUTPUT
+            echo "$SUMMARY" >> $GITHUB_OUTPUT
+            echo "EOF" >> $GITHUB_OUTPUT
+            
+            echo "$SUMMARY"
+          else
+            echo "✅ All packages are up to date!"
+            echo "update_summary=All packages are up to date!" >> $GITHUB_OUTPUT
+          fi
+
+      - name: 📤 Upload update report
+        if: steps.check.outputs.has_updates != '0'
+        uses: actions/upload-artifact@v4
+        with:
+          name: outdated-packages
+          path: outdated.json
+          retention-days: 7
+
+  # ===============================================
+  # 📝 CREATE UPDATE REPORT
+  # ===============================================
+  create-report:
+    name: 📝 Create Update Report
+    runs-on: ubuntu-latest
+    needs: [security-audit, dependency-analysis, update-check]
+    if: always()
+    
+    steps:
+      - name: 📝 Generate dependency report
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const securityStatus = '${{ needs.security-audit.result }}';
+            const analysisStatus = '${{ needs.dependency-analysis.result }}';
+            const hasUpdates = '${{ needs.update-check.outputs.has_updates }}';
+            const updateSummary = `${{ needs.update-check.outputs.update_summary }}`;
+            
+            const reportTitle = '📊 Daily Dependency & Security Report';
+            const reportDate = new Date().toLocaleDateString();
+            
+            let report = `# ${reportTitle}
+            
+            **Date:** ${reportDate}
+            **Repository:** ${{ github.repository }}
+            **Workflow:** [View Details](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})
+            
+            ## 🔒 Security Status
+            ${securityStatus === 'success' ? '✅ **PASSED** - No critical or high vulnerabilities found' : '❌ **FAILED** - Security vulnerabilities detected'}
+            
+            ## 📊 Dependency Analysis
+            ${analysisStatus === 'success' ? '✅ **COMPLETED** - Dependency analysis successful' : '⚠️ **ISSUES** - Check dependency analysis logs'}
+            
+            ## 🆙 Available Updates
+            `;
+            
+            if (hasUpdates === '0') {
+              report += '✅ **UP TO DATE** - All packages are current\n\n';
+            } else {
+              report += `📦 **${hasUpdates} UPDATES AVAILABLE**\n\n${updateSummary}\n\n`;
+              report += '💡 Consider updating these packages in your next maintenance window.\n\n';
+            }
+            
+            report += `
+            ## 🔧 Recommendations
+            
+            ${securityStatus === 'failure' ? '🚨 **URGENT**: Address security vulnerabilities immediately\n' : ''}
+            ${hasUpdates !== '0' ? '📅 **MAINTENANCE**: Schedule dependency updates\n' : ''}
+            ${analysisStatus === 'failure' ? '🔍 **REVIEW**: Check dependency analysis for unused packages\n' : ''}
+            
+            ---
+            *This report is generated automatically. For detailed logs, check the workflow run.*
+            `;
+            
+            console.log('Generated dependency report:');
+            console.log(report);
+            
+            // You could create an issue or send this report somewhere
+            // For now, we'll just log it
+
+      - name: 🎯 Summary
+        run: |
+          echo "📊 Dependency & Security Check Summary"
+          echo "====================================="
+          echo "Security Audit: ${{ needs.security-audit.result }}"
+          echo "Dependency Analysis: ${{ needs.dependency-analysis.result }}"
+          echo "Available Updates: ${{ needs.update-check.outputs.has_updates }} packages"
+          echo ""
+          echo "${{ needs.update-check.outputs.update_summary }}"
+
+  # ===============================================
+  # 🤖 AUTO-UPDATE SAFE DEPENDENCIES (Optional)
+  # ===============================================
+  auto-update:
+    name: 🤖 Auto-update Safe Dependencies
+    runs-on: ubuntu-latest
+    needs: [security-audit, update-check]
+    if: |
+      needs.security-audit.result == 'success' && 
+      needs.update-check.outputs.has_updates != '0' &&
+      github.event_name == 'schedule'
+    
+    steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: 📦 Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20.x'
+          cache: 'npm'
+
+      - name: 🔧 Install dependencies
+        run: npm ci
+
+      - name: 🤖 Update patch versions only
+        run: |
+          echo "🤖 Auto-updating patch versions (safe updates only)..."
+          
+          # Update only patch versions (no breaking changes expected)
+          npx npm-check-updates --target patch --upgrade
+          
+          # Install updated dependencies
+          npm install
+          
+          # Run tests to ensure nothing broke
+          npm run test
+
+      - name: 📝 Create PR for updates
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const { execSync } = require('child_process');
+            
+            // Check if there are changes
+            const hasChanges = execSync('git status --porcelain', { encoding: 'utf-8' }).trim();
+            
+            if (!hasChanges) {
+              console.log('No changes to commit');
+              return;
+            }
+            
+            // Configure git
+            execSync('git config user.name "github-actions[bot]"');
+            execSync('git config user.email "github-actions[bot]@users.noreply.github.com"');
+            
+            // Create branch and commit changes
+            const branchName = `auto-update-dependencies-${Date.now()}`;
+            execSync(`git checkout -b ${branchName}`);
+            execSync('git add package.json package-lock.json');
+            execSync('git commit -m "chore: auto-update patch dependencies"');
+            execSync(`git push origin ${branchName}`);
+            
+            // Create PR
+            const { data: pr } = await github.rest.pulls.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: '🤖 Auto-update patch dependencies',
+              head: branchName,
+              base: 'main',
+              body: `## 🤖 Automated Dependency Updates
+              
+              This PR contains automatic updates for patch-level dependencies.
+              
+              ### ✅ What was updated:
+              - Only patch versions (safe, no breaking changes expected)
+              - All tests pass ✅
+              
+              ### 🔍 Review checklist:
+              - [ ] Review the changes in package.json
+              - [ ] Verify all tests are passing
+              - [ ] Check for any potential issues
+              
+              **Auto-generated by:** [Dependency Update Workflow](https://github.com/${context.repo.owner}/${context.repo.repo}/actions/runs/${{ github.run_id }})
+              `
+            });
+            
+            console.log(`Created PR: ${pr.html_url}`); 
