@@ -248,8 +248,6 @@ describe('AppContext', () => {
         result.current.actions.setFilter({ recognitionType: 'thanks' })
       })
 
-      const filteredCount = result.current.state.displayedPosts.length
-
       // Load more posts
       act(() => {
         result.current.actions.loadMorePosts()
@@ -270,8 +268,7 @@ describe('AppContext', () => {
     const mockParticipant: Participant = {
       id: 99,
       name: 'Test User',
-      avatar: 'test-avatar.jpg',
-      department: 'Test Dept'
+      avatar: 'test-avatar.jpg'
     }
 
     const validPostData: NewPostData = {
@@ -326,7 +323,7 @@ describe('AppContext', () => {
         wrapper: TestWrapper
       })
 
-      const postDataWithoutImage = { ...validPostData, image: undefined }
+      const postDataWithoutImage = { ...validPostData, image: null }
 
       act(() => {
         result.current.actions.addNewPost(postDataWithoutImage)
@@ -356,10 +353,10 @@ describe('AppContext', () => {
       })
 
       const initialCount = result.current.state.posts.length
-      const invalidPostData = { ...validPostData, recipient: undefined }
+      const invalidPostData = { ...validPostData, recipient: null }
 
       act(() => {
-        result.current.actions.addNewPost(invalidPostData as NewPostData)
+        result.current.actions.addNewPost(invalidPostData)
       })
 
       expect(result.current.state.posts).toHaveLength(initialCount)
@@ -371,10 +368,10 @@ describe('AppContext', () => {
       })
 
       const initialCount = result.current.state.posts.length
-      const invalidPostData = { ...validPostData, recognitionType: undefined }
+      const invalidPostData = { ...validPostData, recognitionType: null }
 
       act(() => {
-        result.current.actions.addNewPost(invalidPostData as NewPostData)
+        result.current.actions.addNewPost(invalidPostData)
       })
 
       expect(result.current.state.posts).toHaveLength(initialCount)
