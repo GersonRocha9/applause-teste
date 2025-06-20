@@ -1,0 +1,102 @@
+[
+  {
+    "id": 1,
+    "name": "Rafael Hans",
+    "avatar": "https://randomuser.me/api/portraits/men/10.jpg"
+  },
+  {
+    "id": 2,
+    "name": "Thainá Ricarte",
+    "avatar": "https://randomuser.me/api/portraits/women/12.jpg"
+  },
+  {
+    "id": 3,
+    "name": "Carlos Eduardo Correa",
+    "avatar": "https://randomuser.me/api/portraits/men/14.jpg"
+  },
+  {
+    "id": 4,
+    "name": "Isabela Almeida",
+    "avatar": "https://randomuser.me/api/portraits/women/15.jpg"
+  },
+  {
+    "id": 5,
+    "name": "Fernando Souza",
+    "avatar": "https://randomuser.me/api/portraits/men/18.jpg"
+  },
+  {
+    "id": 6,
+    "name": "Juliana Castro",
+    "avatar": "https://randomuser.me/api/portraits/women/20.jpg"
+  },
+  {
+    "id": 7,
+    "name": "Marcos Vinícius",
+    "avatar": "https://randomuser.me/api/portraits/men/21.jpg"
+  },
+  {
+    "id": 8,
+    "name": "Patrícia Lima",
+    "avatar": "https://randomuser.me/api/portraits/women/22.jpg"
+  },
+  {
+    "id": 9,
+    "name": "Renato Faria",
+    "avatar": "https://randomuser.me/api/portraits/men/23.jpg"
+  },
+  {
+    "id": 10,
+    "name": "Camila Duarte",
+    "avatar": "https://randomuser.me/api/portraits/women/24.jpg"
+  },
+  {
+    "id": 11,
+    "name": "Lucas Pires",
+    "avatar": "https://randomuser.me/api/portraits/men/25.jpg"
+  },
+  {
+    "id": 12,
+    "name": "Aline Martins",
+    "avatar": "https://randomuser.me/api/portraits/women/26.jpg"
+  },
+  {
+    "id": 13,
+    "name": "Eduardo Moreira",
+    "avatar": "https://randomuser.me/api/portraits/men/27.jpg"
+  },
+  {
+    "id": 14,
+    "name": "Vanessa Silveira",
+    "avatar": "https://randomuser.me/api/portraits/women/28.jpg"
+  },
+  {
+    "id": 15,
+    "name": "Fábio Ferreira",
+    "avatar": "https://randomuser.me/api/portraits/men/29.jpg"
+  },
+  {
+    "id": 16,
+    "name": "Bianca Azevedo",
+    "avatar": "https://randomuser.me/api/portraits/women/30.jpg"
+  },
+  {
+    "id": 17,
+    "name": "Henrique Barros",
+    "avatar": "https://randomuser.me/api/portraits/men/31.jpg"
+  },
+  {
+    "id": 18,
+    "name": "Luciana Melo",
+    "avatar": "https://randomuser.me/api/portraits/women/32.jpg"
+  },
+  {
+    "id": 19,
+    "name": "Daniel Costa",
+    "avatar": "https://randomuser.me/api/portraits/men/33.jpg"
+  },
+  {
+    "id": 20,
+    "name": "Tatiane Ramos",
+    "avatar": "https://randomuser.me/api/portraits/women/34.jpg"
+  }
+]
