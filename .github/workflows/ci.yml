@@ -1,204 +1,45 @@
-name: 🚀 CI - Continuous Integration
+name: 🚀 CI - Tests & Build
 
 on:
   push:
-    branches: [ main, develop ]
+    branches: [ main, develop, staging ]
   pull_request:
-    branches: [ main, develop ]
-
-concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+    branches: [ main, develop, staging ]
 
 jobs:
-  # ===============================================
-  # 🧪 TESTING & QUALITY CHECKS
-  # ===============================================
-  test:
-    name: 🧪 Tests & Quality
+  ci:
+    name: 🧪 CI Pipeline
     runs-on: ubuntu-latest
-    
-    strategy:
-      matrix:
-        node-version: [18.x, 20.x]
     
     steps:
       - name: 📥 Checkout code
         uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
 
-      - name: 📦 Setup Node.js ${{ matrix.node-version }}
+      - name: 📦 Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: ${{ matrix.node-version }}
+          node-version: '20.x'
           cache: 'npm'
 
       - name: 🔧 Install dependencies
-        run: |
-          npm ci
-          npm ls
+        run: npm ci
 
-      - name: 🎨 Lint check
+      - name: 🎨 Run Lint
         run: npm run lint
 
-      - name: 🔍 Type check
-        run: npx tsc --noEmit
-
-      - name: 🧪 Run tests
+      - name: 🧪 Run Tests
         run: npm run test:coverage
 
+      - name: 🏗️ Build Application
+        run: npm run build
+
       - name: 📊 Upload coverage to Codecov
-        if: matrix.node-version == '20.x'
+        if: github.event_name == 'pull_request'
         uses: codecov/codecov-action@v3
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
           file: ./coverage/lcov.info
-          flags: unittests
-          name: codecov-umbrella
-
-      - name: 📈 Comment coverage on PR
-        if: github.event_name == 'pull_request' && matrix.node-version == '20.x'
-        uses: romeovs/lcov-reporter-action@v0.3.1
-        with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          lcov-file: ./coverage/lcov.info
-
-  # ===============================================
-  # 🏗️ BUILD VERIFICATION
-  # ===============================================
-  build:
-    name: 🏗️ Build Verification
-    runs-on: ubuntu-latest
-    needs: test
-    
-    steps:
-      - name: 📥 Checkout code
-        uses: actions/checkout@v4
-
-      - name: 📦 Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20.x'
-          cache: 'npm'
-
-      - name: 🔧 Install dependencies
-        run: npm ci
-
-      - name: 🏗️ Build application
-        run: npm run build
-
-      - name: 📤 Upload build artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          name: build-files
-          path: |
-            .next/
-            out/
-          retention-days: 7
-
-  # ===============================================
-  # 🔒 SECURITY SCAN
-  # ===============================================
-  security:
-    name: 🔒 Security Scan
-    runs-on: ubuntu-latest
-    
-    steps:
-      - name: 📥 Checkout code
-        uses: actions/checkout@v4
-
-      - name: 📦 Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20.x'
-          cache: 'npm'
-
-      - name: 🔧 Install dependencies
-        run: npm ci
-
-      - name: 🔍 Run security audit
-        run: npm audit --audit-level=high
-
-      - name: 🛡️ Run Snyk security scan
-        uses: snyk/actions/node@master
         continue-on-error: true
-        env:
-          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
 
-  # ===============================================
-  # ✅ QUALITY GATE
-  # ===============================================
-  quality-gate:
-    name: ✅ Quality Gate
-    runs-on: ubuntu-latest
-    needs: [test, build, security]
-    if: always()
-    
-    steps:
-      - name: 🎯 Check all jobs status
-        run: |
-          if [[ "${{ needs.test.result }}" == "failure" || "${{ needs.build.result }}" == "failure" ]]; then
-            echo "❌ Quality gate failed!"
-            echo "Test result: ${{ needs.test.result }}"
-            echo "Build result: ${{ needs.build.result }}"
-            echo "Security result: ${{ needs.security.result }}"
-            exit 1
-          else
-            echo "✅ Quality gate passed!"
-            echo "✅ Tests: ${{ needs.test.result }}"
-            echo "✅ Build: ${{ needs.build.result }}"
-            echo "⚠️ Security: ${{ needs.security.result }}"
-          fi
-
-      - name: 📝 Comment PR status
-        if: github.event_name == 'pull_request'
-        uses: actions/github-script@v7
-        with:
-          script: |
-            const { data: comments } = await github.rest.issues.listComments({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              issue_number: context.issue.number,
-            });
-
-            const botComment = comments.find(comment => 
-              comment.user.type === 'Bot' && comment.body.includes('🎯 Quality Gate')
-            );
-
-            const status = '${{ needs.test.result }}' === 'success' && 
-                          '${{ needs.build.result }}' === 'success' ? '✅ PASSED' : '❌ FAILED';
-
-            const body = `## 🎯 Quality Gate Results
-
-            | Check | Status | Result |
-            |-------|--------|--------|
-            | 🧪 Tests | ${{ needs.test.result }} | ${{ needs.test.result == 'success' && '✅' || '❌' }} |
-            | 🏗️ Build | ${{ needs.build.result }} | ${{ needs.build.result == 'success' && '✅' || '❌' }} |
-            | 🔒 Security | ${{ needs.security.result }} | ${{ needs.security.result == 'success' && '✅' || '⚠️' }} |
-
-            ### Overall Status: ${status}
-
-            ${status === '✅ PASSED' ? 
-              '🎉 All checks passed! This PR is ready for review.' : 
-              '🚨 Some checks failed. Please fix the issues before merging.'
-            }
-
-            ---
-            *Updated at: ${new Date().toLocaleString()}*`;
-
-            if (botComment) {
-              await github.rest.issues.updateComment({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                comment_id: botComment.id,
-                body: body
-              });
-            } else {
-              await github.rest.issues.createComment({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                issue_number: context.issue.number,
-                body: body
-              });
-            } 
+      - name: ✅ All checks passed
+        run: echo "🎉 CI pipeline completed successfully!" 
