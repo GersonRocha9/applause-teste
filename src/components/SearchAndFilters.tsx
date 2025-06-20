@@ -55,33 +55,33 @@ export const SearchAndFilters = memo(function SearchAndFilters() {
   }, [state.posts, state.filter]);
 
   return (
-    <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 space-y-4">
+    <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 sm:p-6 space-y-3 sm:space-y-4">
       <div className="space-y-2">
         <Input
           placeholder="Buscar por nome do autor ou destinatário..."
           value={state.filter.searchTerm}
           onChange={handleSearchChange}
           leftIcon={<SearchIcon />}
-          className="w-full cursor-text"
+          className="w-full cursor-text text-sm sm:text-base"
         />
       </div>
 
-      <div className="space-y-3">
-        <div className="flex items-center space-x-2">
+      <div className="space-y-2 sm:space-y-3">
+        <div className="flex items-center space-x-1 sm:space-x-2">
           <FilterIcon />
-          <span className="text-sm font-medium text-gray-700">Filtrar por tipo de reconhecimento:</span>
+          <span className="text-xs sm:text-sm font-medium text-gray-700">Filtrar por tipo de reconhecimento:</span>
         </div>
         
-        <div className="flex flex-wrap gap-2">
+        <div className="flex flex-wrap gap-1 sm:gap-2">
           {RECOGNITION_TYPES.map((type) => (
             <Button
               key={type.value}
               onClick={() => handleTypeFilter(type.value)}
               variant={state.filter.recognitionType === type.value ? 'primary' : 'outline'}
               size="sm"
-              className="flex items-center space-x-2 hover:shadow-sm transition-all duration-200"
+              className="flex items-center space-x-1 sm:space-x-2 hover:shadow-sm transition-all duration-200 text-xs sm:text-sm px-2 sm:px-3 py-1 sm:py-2"
             >
-              <span className="text-lg">{type.emoji}</span>
+              <span className="text-sm sm:text-lg">{type.emoji}</span>
               <span>{type.label}</span>
             </Button>
           ))}
@@ -89,7 +89,7 @@ export const SearchAndFilters = memo(function SearchAndFilters() {
       </div>
 
       <div className="flex items-center justify-between pt-2 border-t border-gray-100">
-        <div className="text-sm text-gray-600">
+        <div className="text-xs sm:text-sm text-gray-600">
           {hasActiveFilters ? (
             <>Mostrando <span className="font-medium">{filteredPostsCount}</span> de <span className="font-medium">{state.posts.length}</span> reconhecimentos</>
           ) : (
@@ -102,7 +102,7 @@ export const SearchAndFilters = memo(function SearchAndFilters() {
             onClick={clearFilters}
             variant="ghost"
             size="sm"
-            className="text-blue-600 hover:text-blue-700 hover:bg-blue-50 transition-colors duration-200"
+            className="text-blue-600 hover:text-blue-700 hover:bg-blue-50 transition-colors duration-200 text-xs sm:text-sm px-2 sm:px-3 py-1 sm:py-2"
           >
             Limpar filtros
           </Button>

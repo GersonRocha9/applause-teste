@@ -29,33 +29,33 @@ function formatDate(dateString: string): string {
 
 export const PostCard = memo(function PostCard({ post, isNew = false }: PostCardProps) {
   return (
-    <div className={`bg-white rounded-xl shadow-sm border border-gray-200 p-6 hover:shadow-md transition-shadow duration-200 ${isNew ? 'slide-in-from-top' : ''}`}>
-      <div className="flex items-center justify-between mb-4">
-        <div className="flex items-center space-x-3">
+    <div className={`bg-white rounded-xl shadow-sm border border-gray-200 p-4 sm:p-6 hover:shadow-md transition-shadow duration-200 ${isNew ? 'slide-in-from-top' : ''}`}>
+      <div className="flex items-center justify-between mb-3 sm:mb-4">
+        <div className="flex items-center space-x-2 sm:space-x-3">
           <Avatar src={post.authorAvatar} alt={post.authorName} size="md" />
-          <div>
-            <div className="flex items-center space-x-2">
-              <span className="font-semibold text-gray-900">{post.authorName}</span>
-              <span className="text-gray-500">elogiou</span>
-              <span className="font-semibold text-gray-900">{post.recipientName}</span>
+          <div className="min-w-0 flex-1">
+            <div className="flex items-center space-x-1 sm:space-x-2 flex-wrap">
+              <span className="font-semibold text-gray-900 text-sm sm:text-base">{post.authorName}</span>
+              <span className="text-gray-500 text-sm sm:text-base">elogiou</span>
+              <span className="font-semibold text-gray-900 text-sm sm:text-base">{post.recipientName}</span>
             </div>
-            <div className="flex items-center space-x-2 mt-1">
-              <span className="text-2xl">{post.emoji}</span>
-              <span className="text-sm font-medium text-blue-600">{post.type}</span>
+            <div className="flex items-center space-x-1 sm:space-x-2 mt-1">
+              <span className="text-xl sm:text-2xl">{post.emoji}</span>
+              <span className="text-xs sm:text-sm font-medium text-blue-600">{post.type}</span>
             </div>
           </div>
         </div>
-        <time className="text-sm text-gray-500">{formatDate(post.date)}</time>
+        <time className="text-xs sm:text-sm text-gray-500 ml-2 flex-shrink-0">{formatDate(post.date)}</time>
       </div>
 
-      <p className="text-gray-800 mb-4 text-base leading-relaxed">{post.text}</p>
+      <p className="text-gray-800 mb-3 sm:mb-4 text-sm sm:text-base leading-relaxed">{post.text}</p>
 
       {post.hashtags && post.hashtags.length > 0 && (
-        <div className="flex flex-wrap gap-2 mb-4">
+        <div className="flex flex-wrap gap-1 sm:gap-2 mb-3 sm:mb-4">
           {post.hashtags.map((hashtag, index) => (
             <span 
               key={index}
-              className="text-blue-600 text-sm font-medium hover:text-blue-700 cursor-pointer transition-colors duration-200"
+              className="text-blue-600 text-xs sm:text-sm font-medium hover:text-blue-700 cursor-pointer transition-colors duration-200"
               onClick={() => console.log(`Clicked hashtag: ${hashtag}`)}
             >
               #{hashtag}
@@ -65,7 +65,7 @@ export const PostCard = memo(function PostCard({ post, isNew = false }: PostCard
       )}
 
       {post.image && (
-        <div className="relative h-64 rounded-lg overflow-hidden bg-gray-100">
+        <div className="relative h-48 sm:h-64 rounded-lg overflow-hidden bg-gray-100 mb-3 sm:mb-0">
           <Image
             src={post.image}
             alt="Post image"
@@ -76,9 +76,9 @@ export const PostCard = memo(function PostCard({ post, isNew = false }: PostCard
         </div>
       )}
 
-      <div className="flex items-center mt-4 pt-4 border-t border-gray-100">
+      <div className="flex items-center mt-3 sm:mt-4 pt-3 sm:pt-4 border-t border-gray-100">
         <Avatar src={post.recipientAvatar} alt={post.recipientName} size="sm" />
-        <span className="ml-2 text-sm text-gray-600">
+        <span className="ml-2 text-xs sm:text-sm text-gray-600">
           Reconhecimento para <span className="font-medium">{post.recipientName}</span>
         </span>
       </div>
