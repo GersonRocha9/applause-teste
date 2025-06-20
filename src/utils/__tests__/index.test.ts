@@ -14,6 +14,18 @@ describe('Utility Functions', () => {
       expect(result).toBe('5min')
     })
 
+    it('returns hours for time within 24 hours', () => {
+      const twoHoursAgo = new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString()
+      const result = formatRelativeTime(twoHoursAgo)
+      expect(result).toBe('2h')
+    })
+
+    it('returns days for time within a week', () => {
+      const threeDaysAgo = new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString()
+      const result = formatRelativeTime(threeDaysAgo)
+      expect(result).toBe('3d')
+    })
+
     it('returns locale date for old dates', () => {
       const oldDate = '2020-01-15T10:30:00Z'
       const result = formatRelativeTime(oldDate)
