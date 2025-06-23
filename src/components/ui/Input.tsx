@@ -1,5 +1,3 @@
-'use client';
-
 import { forwardRef, memo } from 'react';
 
 interface InputProps extends React.InputHTMLAttributes<HTMLInputElement> {
