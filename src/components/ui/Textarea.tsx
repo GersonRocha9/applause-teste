@@ -1,5 +1,3 @@
-'use client';
-
 import { forwardRef, memo } from 'react';
 
 interface TextareaProps extends React.TextareaHTMLAttributes<HTMLTextAreaElement> {
