@@ -4,9 +4,8 @@ import { Feed } from '@/components/Feed';
 import { MobileLayout } from '@/components/MobileLayout';
 import { RecognitionForm } from '@/components/RecognitionForm';
 import { SearchAndFilters } from '@/components/SearchAndFilters';
-import { memo } from 'react';
 
-export default memo(function HomePage() {
+export default function HomePage() {
   return (
     <div className="bg-gray-50 min-h-screen">
       <MobileLayout />
@@ -31,4 +30,4 @@ export default memo(function HomePage() {
       </div>
     </div>
   );
-});
+};

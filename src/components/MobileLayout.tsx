@@ -1,12 +1,12 @@
 'use client';
 
-import { memo, useState } from 'react';
+import { useState } from 'react';
 import { Feed } from './Feed';
 import { RecognitionForm } from './RecognitionForm';
 import { SearchAndFilters } from './SearchAndFilters';
 import { Button } from './ui/Button';
 
-export const MobileLayout = memo(function MobileLayout() {
+export function MobileLayout() {
   const [activeTab, setActiveTab] = useState<'feed' | 'form'>('feed');
 
   return (
@@ -60,4 +60,4 @@ export const MobileLayout = memo(function MobileLayout() {
       </div>
     </div>
   );
-}); 
+} 

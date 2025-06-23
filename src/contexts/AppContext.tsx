@@ -70,7 +70,7 @@ function appReducer(state: AppState, action: AppAction): AppState {
 
       const newPost: Post = {
         id: Date.now(),
-        authorName: 'Você', // In a real app, this would come from authenticated user
+        authorName: 'Você',
         authorAvatar: 'https://randomuser.me/api/portraits/lego/1.jpg',
         recipientName: action.payload.recipient.name,
         recipientAvatar: action.payload.recipient.avatar,
